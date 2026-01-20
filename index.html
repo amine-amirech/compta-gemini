@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur Écritures Comptables N2F/Sage</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-xl shadow-xl p-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Générateur d'écritures comptables N2F / Sage</h1>
+      <p class="text-gray-600 mb-8">Importez une facture PDF et générez automatiquement l'écriture comptable</p>
+
+      <div class="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-200">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Paramètres</h2>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">N° de facture</label>
+            <input type="text" id="numEcriture" value="10371" class="w-full px-3 py-2 border rounded-lg">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Code journal</label>
+            <input type="text" id="codeJournal" value="HA" maxlength="2" class="w-full px-3 py-2 border rounded-lg">
+          </div>
+        </div>
+        
+        <div class="flex gap-2">
+          <button onclick="openAccountManager('charge')" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">
+            Gérer Comptes Charges
+          </button>
+          <button onclick="openAccountManager('fournisseur')" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm">
+            Gérer Comptes Fournisseurs
+          </button>
+          <button onclick="openAccountManager('tva')" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
+            Gérer Comptes TVA
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-8">
+        <label id="dropZone" class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer bg-blue-50 hover:bg-blue-100">
+          <div class="text-center">
+            <p class="mb-2 text-sm text-gray-700"><span class="font-semibold">Cliquez</span> ou glissez un PDF</p>
+            <p id="fileName" class="text-xs text-gray-500"></p>
+          </div>
+          <input type="file" id="fileInput" accept="application/pdf" class="hidden">
+        </label>
+      </div>
+
+      <div id="loading" class="hidden text-center py-8">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        <p class="mt-4 text-gray-600">Analyse en cours...</p>
+      </div>
+
+      <div id="results" class="hidden">
+        <div class="bg-gray-50 rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4">Données extraites</h2>
+          <div id="extractedData" class="grid grid-cols-3 gap-4"></div>
+          <div id="intracommButton" class="hidden mt-4">
+            <button onclick="applyAutoliquidation()" class="px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
+              🇪🇺 Appliquer Autoliquidation TVA Intracommunautaire
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4">Écritures comptables</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full border">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-2 text-left">N° Pièce</th>
+                  <th class="px-4 py-2 text-left">Type</th>
+                  <th class="px-4 py-2 text-left">Compte</th>
+                  <th class="px-4 py-2 text-left">Montant</th>
+                  <th class="px-4 py-2 text-left">D/C</th>
+                </tr>
+              </thead>
+              <tbody id="entriesTable"></tbody>
+            </table>
+          </div>
+          <button onclick="exportToSage()" class="mt-6 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600">
+            Exporter pour N2F / Sage
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gestion Comptes -->
+  <div id="accountModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+      <h2 id="modalTitle" class="text-2xl font-bold mb-4"></h2>
+      
+      <div class="mb-4">
+        <h3 class="font-semibold mb-2">Ajouter un compte</h3>
+        <div class="flex gap-2">
+          <input type="text" id="newAccountCode" placeholder="Code (ex: 606110)" class="flex-1 px-3 py-2 border rounded-lg">
+          <input type="text" id="newAccountLabel" placeholder="Libellé" class="flex-1 px-3 py-2 border rounded-lg">
+          <button onclick="addNewAccount()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="font-semibold mb-2">Comptes existants</h3>
+        <div id="accountsList" class="space-y-2"></div>
+      </div>
+
+      <button onclick="closeAccountManager()" class="w-full px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+        Fermer
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let extractedData = null;
+    let accountEntries = [];
+    let currentAccountType = null;
+
+    let comptesCharges = [
+      { code: '601000', label: 'FR - MP & Serv. INDUCTEURS' },
+      { code: '601001', label: 'FR - MP PDR' },
+      { code: '601002', label: 'FR - SERVICE TSE' },
+      { code: '601003', label: 'FR - MP GHFR STOCK' },
+      { code: '601004', label: 'FR - MP RETROFIT' },
+      { code: '601005', label: 'FR - GENERATEURS ET EQUIPEMENTS' },
+      { code: '601100', label: 'UE - MP INDUCTEURS' },
+      { code: '601101', label: 'UE - MP INDUCTEURS GHE' },
+      { code: '601102', label: 'UE - GENERATEURS ET EQUIPEMENTS GHE' },
+      { code: '601103', label: 'UE - SERVICES' },
+      { code: '601104', label: 'UE - SERVICES GHE' },
+      { code: '601105', label: 'UE - PIECES DE RECHANGE' },
+      { code: '601106', label: 'UE - PIECES DE RECHANGE GHE' },
+      { code: '601107', label: 'UE - RETROFIT' },
+      { code: '601108', label: 'UE - RETROFIT GHE' },
+      { code: '601109', label: 'UE - MP GHFR STOCK' },
+      { code: '601200', label: 'HORS UE - PDR' },
+      { code: '601210', label: 'HORS UE - SERVICE' },
+      { code: '604000', label: 'ACHATS ETUDES & PS - AUTOLI' },
+      { code: '604100', label: 'ACHATS ETUDES & PS 20%' },
+      { code: '604200', label: 'ACHATS ETUDES & PS TTC' },
+      { code: '606110', label: 'Electricité 20%' },
+      { code: '606115', label: 'Electricité 5.5%' },
+      { code: '606130', label: 'Eau' },
+      { code: '606150', label: 'CARBURANT TTC' },
+      { code: '606160', label: 'CARBURANTS - GAS-OIL DED 80%' },
+      { code: '606161', label: 'CARBURANT GO INTRACOM' },
+      { code: '606162', label: 'AMS - CARBURANT - GAS-OIL DED 80%' },
+      { code: '606170', label: 'ATM - CARBURANTS - GAS-OIL TTC' },
+      { code: '606171', label: 'ATM - CARBURANTS GAS-OIL DED 80%' },
+      { code: '606172', label: 'ATM - CARBURANTS GO INTRACOM' },
+      { code: '606300', label: 'Fournit. entretien & petit équip.' },
+      { code: '606310', label: 'Four, entret. pt. mat. ttc' },
+      { code: '606320', label: 'FOURN. ENTRET ET EQUIP INTRACO' },
+      { code: '606330', label: 'Fourni. entretien & petit équip 10%' },
+      { code: '606340', label: 'Fournit, entretien & petit équi 5,5%' },
+      { code: '606420', label: 'FOURNITURE ADMINISTRATIVE INTR' },
+      { code: '612201', label: 'APOLLO - CB LAND ROVER' },
+      { code: '613200', label: 'Locations immobilières' },
+      { code: '613507', label: 'SAET - location HD-918-BW' },
+      { code: '613508', label: 'LOCATION SKODA GT-440-FT' },
+      { code: '613509', label: 'LOCATION BMW GM-510-XM GHFR' },
+      { code: '613510', label: 'LOCATION HD-005-BX GHFR' },
+      { code: '613511', label: 'LOCAT PEUGEOT 308 GK-537-LR GHFR' },
+      { code: '613512', label: 'ATM - LOCATION HYUNDAI GK-194-QL' },
+      { code: '613513', label: 'LOCATION VOITURE TTC' },
+      { code: '613520', label: 'Location bouteilles - GAZ' },
+      { code: '613530', label: 'Location Logiciel SAGE' },
+      { code: '613540', label: 'Location solution N2F' },
+      { code: '613800', label: 'LOCATIONS DIVERSES' },
+      { code: '615200', label: 'Sur biens immobiliers' },
+      { code: '615529', label: 'APOLLO - ENTRETIEN FD-711-RW' },
+      { code: '615530', label: 'ENTRETIEN HD-005-BX' },
+      { code: '615531', label: 'ENTRETIEN DN-880-RY' },
+      { code: '615532', label: 'ENTRETIEN GM-510-XM' },
+      { code: '615533', label: 'ENTRETIEN GT-440-FT' },
+      { code: '615540', label: 'ATM - ENTRETIEN GK-194-QL' },
+      { code: '615550', label: 'AMS - ENTRETIEN GK-537-LR' },
+      { code: '615600', label: 'Maintenance' },
+      { code: '622600', label: 'Honoraires' },
+      { code: '622601', label: 'Honoraires juridiques' },
+      { code: '622700', label: 'Frais d\'actes et de contentieux' },
+      { code: '624100', label: 'TRANSPORT SUR ACHAT INTRACOM' },
+      { code: '624110', label: 'Transport sur achat 20%' },
+      { code: '624130', label: 'TRANSPORT DE MARCHANDISE 20%' },
+      { code: '624140', label: 'TRANSPORT DE MARCHANDISE HORS CEE' },
+      { code: '624200', label: 'TRANSPORT SUR ACHAT 20%' },
+      { code: '625100', label: 'Voyages et déplacements' },
+      { code: '625105', label: 'AMS - VOYAGE ET DEPLACEMENT TTC' },
+      { code: '625106', label: 'AMS - VOYAGE ET DEPLACEMENT 20%' },
+      { code: '625107', label: 'AMS - VOYAGE ET DEPLACEMENT 10%' },
+      { code: '625109', label: 'AMS - VOYAGE ET DEPLACEMENT INTRACOM' },
+      { code: '625110', label: 'GHFR - VOYAGES ET DEPLACEMENTS 10%' },
+      { code: '625111', label: 'GHFR - VOYAGES ET DEPLACEMENTS TTC' },
+      { code: '625112', label: 'GHFR - VOYAGE ET DEPLACEMENT INTRACOM' },
+      { code: '625114', label: 'GHFR - VOYAGE ET DEPLCAEMENT 20%' },
+      { code: '625115', label: 'ATM - VOYAGE ET DEPLACEMENT TTC' },
+      { code: '625116', label: 'ATM - VOYAGE ET DEPLACEMENT 20%' },
+      { code: '625117', label: 'ATM - VOYAGE ET DEPLACEMENT 10%' },
+      { code: '625119', label: 'ATM - VOYAGE ET DEPLACEMENT INTRACOM' },
+      { code: '625120', label: 'GHFR - PEAGES 20%' },
+      { code: '625121', label: 'ATM - PEAGE 20%' },
+      { code: '625123', label: 'ATM - PEAGE TTC' },
+      { code: '625125', label: 'SAET - VOYAGE ET DEPLACEMENT TTC' },
+      { code: '625700', label: 'RESTAURANT 20%' },
+      { code: '625710', label: 'RESTAURANT 10%' },
+      { code: '625711', label: 'RESTAURANT 5,5%' },
+      { code: '626000', label: 'Frais postaux' },
+      { code: '626001', label: 'Frais postaux TTC' },
+    ];
+
+    let comptesFournisseurs = [
+      { code: '4010AA', label: 'AALBERTS' },
+      { code: '4010AC', label: 'ACM COTISATION ASSURANCE' },
+      { code: '4010AE', label: 'AREAS ASSURANCES' },
+      { code: '4010AI', label: 'AIR TECHNIQUES' },
+      { code: '4010AK', label: 'AJAX TOCCO Magnethermic UK' },
+      { code: '4010AM', label: 'AMAZON' },
+      { code: '4010AR', label: 'AIR PRODUCTS' },
+      { code: '4010AS', label: 'ASTE' },
+      { code: '4010AT', label: 'ATM WARREN' },
+      { code: '4010AV', label: 'ARVAL' },
+      { code: '4010AY', label: 'AYVENS' },
+      { code: '4010BA', label: 'BAUMANN' },
+      { code: '4010BC', label: 'BECHTLE' },
+      { code: '4010BD', label: 'BRICO DEPOT' },
+      { code: '4010BN', label: 'BINOMI' },
+      { code: '4010BO', label: 'BOUYGUES' },
+      { code: '4010BV', label: 'BUREAU VERITAS' },
+      { code: '4010BX', label: 'BENE INOX' },
+      { code: '4010CA', label: 'CAEN ESPACE AFFAIRE' },
+      { code: '4010CB', label: 'CB' },
+      { code: '4010CC', label: 'CCI CAMPUS' },
+      { code: '4010CD', label: 'Coeur de foyer' },
+      { code: '4010CI', label: 'CIC LEASING' },
+      { code: '4010CO', label: 'CO-PILOTES' },
+      { code: '4010CP', label: 'CHRONOPOST' },
+      { code: '4010CS', label: 'CARBOSYSTEM' },
+      { code: '4010CT', label: 'CASTOLIN EUTECTIC' },
+      { code: '4010CV', label: 'CEVA' },
+      { code: '4010DH', label: 'DHL EXPRESS' },
+      { code: '4010EC', label: 'ESTEVAN CALVO' },
+      { code: '4010ED', label: 'EDF' },
+      { code: '4010EF', label: 'EFRAPO' },
+      { code: '4010EG', label: 'EGLINSDOERFER PFOHL' },
+      { code: '4010EM', label: 'EMG PRESSE' },
+      { code: '4010ET', label: 'ELECTRO-RHIN' },
+      { code: '4010EV', label: 'ECOVIS' },
+      { code: '4010EX', label: 'COLMARIENNE DES EAUX' },
+      { code: '4010FD', label: 'FOURNISSEURS DIVERS' },
+      { code: '4010FE', label: 'FRANCE EXPRESS' },
+      { code: '4010FI', label: 'FIDUCIAL' },
+      { code: '4010FN', label: 'FINAL AM' },
+      { code: '4010FR', label: 'FREE' },
+      { code: '4010GA', label: 'GH GERMANY' },
+      { code: '4010GC', label: 'GROSCLAUDE ROBIN' },
+      { code: '4010GH', label: 'GH ELECTROTHERMIA' },
+      { code: '4010GI', label: 'GH INDUCTION ATMOSPHERES' },
+      { code: '4010GL', label: 'GL EVENTS' },
+      { code: '4010GM', label: 'G.MAIER' },
+      { code: '4010GP', label: 'GROUPE ADF' },
+      { code: '4010GR', label: 'GREFFE DU TRIBUNAL' },
+      { code: '4010GU', label: 'GUS EI' },
+      { code: '4010HA', label: 'Hanna Instrumments' },
+      { code: '4010IC', label: 'ICM' },
+      { code: '4010IG', label: 'INFOGREFFE' },
+      { code: '4010IO', label: 'IONOS' },
+      { code: '4010KL', label: 'KILOUTOU' },
+      { code: '4010LD', label: 'LAUDA' },
+      { code: '4010LE', label: 'LECLERC' },
+      { code: '4010LS', label: 'LetMeShip' },
+      { code: '4010ME', label: 'MEDIACO' },
+      { code: '4010MG', label: 'MATRIGALSA' },
+      { code: '4010ML', label: 'MOLDES 2010' },
+      { code: '4010MT', label: 'Médecine travail' },
+      { code: '4010NC', label: 'NDF CONRAUD' },
+      { code: '4010ND', label: 'NDF DIVERS' },
+      { code: '4010NF', label: 'N2F' },
+      { code: '4010NH', label: 'NHP' },
+      { code: '4010NJ', label: 'NDF POURCHAUX' },
+      { code: '4010NM', label: 'NDF MARQUIS' },
+      { code: '4010NO', label: 'NOVAPLEST' },
+      { code: '4010NP', label: 'NDF PATARD' },
+      { code: '4010NS', label: 'NDF CARRIERE' },
+      { code: '4010NT', label: 'NDF THOMAS' },
+      { code: '4010NV', label: 'NDF BUFFENOIR' },
+      { code: '4010OR', label: 'ORANGE' },
+      { code: '4010PE', label: 'PEAGE' },
+      { code: '4010PS', label: 'LA POSTE' },
+      { code: '4010PT', label: 'PROTEVAL' },
+      { code: '4010RS', label: 'RS' },
+      { code: '4010SB', label: 'STAUBLI' },
+      { code: '4010SC', label: 'SCI DIKATES' },
+      { code: '4010SG', label: 'SAGE' },
+      { code: '4010ST', label: 'SEIT ELETTRONICA' },
+      { code: '4010SU', label: 'SUEZ' },
+      { code: '4010TL', label: 'TALLERES IRANZO' },
+      { code: '4010TM', label: 'TM INDUSTRY' },
+      { code: '4010TN', label: 'TNT FEDEX' },
+      { code: '4010TS', label: 'TRANSPORT' },
+      { code: '4010UL', label: 'ULYS' },
+      { code: '4010VC', label: 'VOCA CONSEIL' },
+      { code: '4010ZG', label: 'ZIEGLER' },
+    ];
+
+    let comptesTVA = [
+      { code: '445662', label: 'Taux réduit' },
+      { code: '445666', label: 'Taux intermédiaire' },
+      { code: '445667', label: 'TVA déductible 20%' },
+      { code: '445668', label: 'TVA déductible Intracomm' },
+      { code: '445200', label: 'TVA collectée Intracomm' },
+    ];
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.ondragover = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    dropZone.ondrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const files = e.dataTransfer.files;
+      if (files[0]) analyzeInvoice(files[0]);
+    };
+
+    fileInput.onchange = (e) => {
+      if (e.target.files[0]) analyzeInvoice(e.target.files[0]);
+    };
+
+    async function analyzeInvoice(file) {
+      console.log('1. Début analyse', file.name);
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('fileName').textContent = file.name;
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        console.log('2. Fichier lu');
+        const base64 = reader.result.split(',')[1];
+        console.log('3. Base64 créé, longueur:', base64.length);
+        
+        try {
+          console.log('4. Appel API...');
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 1000,
+              messages: [{
+                role: 'user',
+                content: [{
+                  type: 'document',
+                  source: { type: 'base64', media_type: 'application/pdf', data: base64 }
+                }, {
+                  type: 'text',
+                  text: `Analyse cette facture et extrais UNIQUEMENT le JSON suivant (sans texte avant ou après) :
+{
+  "fournisseur": "nom du fournisseur",
+  "numero_facture": "numéro de facture",
+  "date": "date au format AAAAMMJJ",
+  "montant_ht": nombre,
+  "tva_taux": nombre (ex: 20 pour 20%, ou 0 si intracommunautaire),
+  "montant_tva": nombre,
+  "montant_ttc": nombre,
+  "description": "description courte de la facture",
+  "reference_interne": "référence interne si présente (format PDR-XX-XXXX ou similaire), sinon null",
+  "categorie_suggeree": "catégorie (ex: Electricité, Transport, Honoraires, etc.)",
+  "est_intracomm": true ou false (true si facture UE/intracommunautaire),
+  "est_avoir": true ou false (true si avoir/note de crédit)
+}
+
+Réponds UNIQUEMENT avec le JSON, rien d'autre.`
+                }]
+              }]
+            })
+          });
+
+          console.log('5. Réponse reçue, status:', response.status);
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Erreur API:', errorData);
+            
+            if (response.status === 429) {
+              throw new Error('Trop de requêtes. Veuillez patienter quelques secondes et réessayer.');
+            } else if (response.status === 401) {
+              throw new Error('Erreur d\'authentification API. Vérifiez votre configuration.');
+            } else {
+              throw new Error(`Erreur API (${response.status}): ${errorData.error?.message || 'Erreur inconnue'}`);
+            }
+          }
+          
+          const data = await response.json();
+          console.log('6. Data parsée:', data);
+          
+          if (!data.content || !data.content[0] || !data.content[0].text) {
+            throw new Error('Réponse API invalide - pas de contenu texte');
+          }
+          
+          const text = data.content[0].text;
+          console.log('7. Texte brut:', text);
+          
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('Pas de JSON trouvé dans la réponse');
+          
+          const jsonText = jsonMatch[0];
+          console.log('8. JSON extrait:', jsonText);
+          extractedData = JSON.parse(jsonText);
+          console.log('9. JSON parsé:', extractedData);
+          
+          displayResults();
+          generateEntries();
+        } catch (error) {
+          console.error('ERREUR:', error);
+          document.getElementById('loading').classList.add('hidden');
+          
+          // Affichage d'une alerte plus informative
+          const errorMsg = error.message || 'Erreur inconnue';
+          alert('❌ ' + errorMsg + '\n\nSi l\'erreur persiste, attendez quelques secondes avant de réessayer.');
+          return;
+        }
+        
+        document.getElementById('loading').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function displayResults() {
+      document.getElementById('results').classList.remove('hidden');
+      
+      const isAvoir = extractedData.est_avoir || extractedData.montant_ht < 0;
+      const isIntracomm = extractedData.est_intracomm || extractedData.tva_taux === 0;
+      
+      document.getElementById('extractedData').innerHTML = `
+        <div><p class="text-sm text-gray-500">Fournisseur</p><p class="font-semibold">${extractedData.fournisseur}</p></div>
+        <div><p class="text-sm text-gray-500">N° Facture</p><p class="font-semibold">${extractedData.numero_facture}</p></div>
+        <div><p class="text-sm text-gray-500">Date</p><p class="font-semibold">${extractedData.date}</p></div>
+        ${extractedData.reference_interne ? `<div><p class="text-sm text-gray-500">Référence</p><p class="font-semibold">${extractedData.reference_interne}</p></div>` : ''}
+        <div><p class="text-sm text-gray-500">Montant HT</p><p class="font-semibold">${extractedData.montant_ht.toFixed(2)} €</p></div>
+        <div><p class="text-sm text-gray-500">TVA (${extractedData.tva_taux}%)</p><p class="font-semibold">${extractedData.montant_tva.toFixed(2)} €</p></div>
+        <div><p class="text-sm text-gray-500">Montant TTC</p><p class="font-semibold">${extractedData.montant_ttc.toFixed(2)} €</p></div>
+        ${isAvoir ? '<div class="col-span-3"><span class="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-semibold">AVOIR</span></div>' : ''}
+        ${isIntracomm ? '<div class="col-span-3"><span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">INTRACOMMUNAUTAIRE</span></div>' : ''}
+      `;
+      
+      // Afficher bouton autoliquidation si facture UE sans TVA
+      if (isIntracomm && !isAvoir) {
+        document.getElementById('intracommButton').classList.remove('hidden');
+      } else {
+        document.getElementById('intracommButton').classList.add('hidden');
+      }
+    }
+
+    function generateEntries() {
+      // Utiliser le numéro de facture extrait au lieu du champ input
+      const numFacture = extractedData.numero_facture || document.getElementById('numEcriture').value;
+      const code = document.getElementById('codeJournal').value;
+      const piece = numFacture + code + extractedData.date;
+      
+      const isAvoir = extractedData.est_avoir || extractedData.montant_ht < 0;
+      const isIntracomm = extractedData.est_intracomm || extractedData.tva_taux === 0;
+      
+      accountEntries = [];
+      
+      if (isAvoir) {
+        accountEntries.push(
+          { piece, accountType: 'fournisseur', compte: '', montant: Math.abs(extractedData.montant_ttc).toFixed(2), sens: 'D' },
+          { piece, accountType: 'charge', compte: '', montant: Math.abs(extractedData.montant_ttc).toFixed(2), sens: 'C' }
+        );
+      } else if (isIntracomm) {
+        const tvaIntra = (extractedData.montant_ht * 0.20).toFixed(2);
+        accountEntries.push(
+          { piece, accountType: 'charge', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
+          { piece, accountType: 'tva', compte: '445668', montant: tvaIntra, sens: 'D' },
+          { piece, accountType: 'tva', compte: '445200', montant: tvaIntra, sens: 'C' },
+          { piece, accountType: 'fournisseur', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'C' }
+        );
+      } else {
+        accountEntries.push(
+          { piece, accountType: 'charge', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
+          { piece, accountType: 'tva', compte: '445667', montant: extractedData.montant_tva.toFixed(2), sens: 'D' },
+          { piece, accountType: 'fournisseur', compte: '', montant: extractedData.montant_ttc.toFixed(2), sens: 'C' }
+        );
+      }
+
+      const tbody = document.getElementById('entriesTable');
+      tbody.innerHTML = accountEntries.map((e, i) => `
+        <tr class="border-t">
+          <td class="px-4 py-2 font-mono text-sm">${e.piece}</td>
+          <td class="px-4 py-2">
+            <span class="px-2 py-1 rounded text-xs font-medium ${
+              e.accountType === 'charge' ? 'bg-blue-100 text-blue-700' :
+              e.accountType === 'fournisseur' ? 'bg-purple-100 text-purple-700' :
+              'bg-amber-100 text-amber-700'
+            }">${e.accountType}</span>
+          </td>
+          <td class="px-4 py-2">
+            <select onchange="updateAccount(${i}, this.value)" class="border rounded px-2 py-1 w-full text-sm">
+              <option value="">-- Sélectionner --</option>
+              ${getAccountsByType(e.accountType).map(a => 
+                `<option value="${a.code}" ${e.compte === a.code ? 'selected' : ''}>${a.code} - ${a.label}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td class="px-4 py-2 font-mono">${e.montant} €</td>
+          <td class="px-4 py-2">
+            <span class="px-2 py-1 rounded text-xs font-semibold ${e.sens === 'D' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+              ${e.sens}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function getAccountsByType(type) {
+      if (type === 'charge') return comptesCharges;
+      if (type === 'fournisseur') return comptesFournisseurs;
+      return comptesTVA;
+    }
+
+    function updateAccount(index, value) {
+      accountEntries[index].compte = value;
+    }
+
+    function applyAutoliquidation() {
+      if (!confirm('Appliquer l\'autoliquidation TVA à 20% sur cette facture UE ?')) return;
+      
+      extractedData.est_intracomm = true;
+      extractedData.tva_taux = 0;
+      extractedData.montant_tva = 0;
+      extractedData.montant_ttc = extractedData.montant_ht;
+      
+      displayResults();
+      generateEntries();
+      
+      alert('Autoliquidation appliquée ! Les comptes 445668 et 445200 ont été ajoutés avec 20% du montant HT.');
+    }
+
+    function openAccountManager(type) {
+      currentAccountType = type;
+      const titles = {
+        'charge': 'Gestion des Comptes de Charges',
+        'fournisseur': 'Gestion des Comptes Fournisseurs',
+        'tva': 'Gestion des Comptes TVA'
+      };
+      
+      document.getElementById('modalTitle').textContent = titles[type];
+      refreshAccountsList();
+      document.getElementById('accountModal').classList.remove('hidden');
+    }
+
+    function closeAccountManager() {
+      document.getElementById('accountModal').classList.add('hidden');
+      document.getElementById('newAccountCode').value = '';
+      document.getElementById('newAccountLabel').value = '';
+      if (extractedData) generateEntries();
+    }
+
+    function refreshAccountsList() {
+      const accounts = getAccountsByType(currentAccountType);
+      const list = document.getElementById('accountsList');
+      
+      list.innerHTML = accounts.map((a, i) => `
+        <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+          <span class="font-mono text-sm">${a.code}</span>
+          <span class="flex-1 ml-4">${a.label}</span>
+          <button onclick="deleteAccount(${i})" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+            Supprimer
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addNewAccount() {
+      const code = document.getElementById('newAccountCode').value.trim();
+      const label = document.getElementById('newAccountLabel').value.trim();
+      
+      if (!code || !label) {
+        alert('Veuillez remplir le code et le libellé');
+        return;
+      }
+      
+      const accounts = getAccountsByType(currentAccountType);
+      if (accounts.find(a => a.code === code)) {
+        alert('Ce code existe déjà');
+        return;
+      }
+      
+      accounts.push({ code, label });
+      document.getElementById('newAccountCode').value = '';
+      document.getElementById('newAccountLabel').value = '';
+      refreshAccountsList();
+    }
+
+    function deleteAccount(index) {
+      if (!confirm('Supprimer ce compte ?')) return;
+      
+      const accounts = getAccountsByType(currentAccountType);
+      accounts.splice(index, 1);
+      refreshAccountsList();
+    }
+
+    function exportToSage() {
+      const hasEmpty = accountEntries.some(e => !e.compte);
+      if (hasEmpty && !confirm('Certains comptes ne sont pas renseignés. Continuer ?')) return;
+      
+      const numFacture = extractedData.numero_facture || document.getElementById('numEcriture').value;
+      const code = document.getElementById('codeJournal').value;
+      const date = extractedData.date;
+      
+      const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      let output = '';
+      accountEntries.forEach(e => {
+        // Libellé: Référence + Fournisseur si référence existe, sinon Fournisseur seul
+        let libelle = '';
+        if (extractedData.reference_interne) {
+          libelle = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
+        } else {
+          libelle = removeAccents(extractedData.fournisseur);
+        }
+        libelle = libelle.substring(0, 25);
+        
+        // Construction description avec référence si présente
+        let description = '';
+        if (extractedData.reference_interne) {
+          description = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
+        } else {
+          description = removeAccents(
+            e.accountType === 'charge' ? 
+              (extractedData.description || 'Achat') : 
+              extractedData.fournisseur
+          );
+        }
+        description = description.substring(0, 34);
+        
+        // FIX: Double arrondi comme N2F
+        const montantArrondi = Math.round(parseFloat(e.montant) * 100) / 100;
+        const montantCentimes = Math.round(montantArrondi * 100);
+        
+        const line = 
+          numFacture.toString().padStart(5, ' ') + ',' +
+          code + ',' +
+          date + ',' +
+          ''.padEnd(20, ' ') + ',' +
+          e.compte.padEnd(11, ' ') + ',' +
+          libelle.padEnd(25, ' ') + ',' +
+          montantCentimes.toString().padStart(13, ' ') + ',' +
+          e.sens + ',' +
+          ''.padEnd(12, ' ') + ',' +
+          ''.padEnd(6, ' ') + ',' +
+          description.padEnd(34, ' ') + ',' +
+          '\r\n';
+        
+        output += line;
+      });
+
+      const blob = new Blob([output], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ExportFile_${removeAccents(extractedData.fournisseur).replace(/[^a-zA-Z0-9]/g, '_')}_${date}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('Export N2F réussi !');
+    }
+  </script>
+</body>
+</html
