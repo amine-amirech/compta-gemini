@@ -337,6 +337,31 @@
       { code: '445200', label: 'TVA collectée Intracomm' },
     ];
 
+    // Gestion de la clé API Gemini
+function saveApiKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) {
+    alert('⚠️ Veuillez entrer une clé API');
+    return;
+  }
+  if (!key.startsWith('AIza')) {
+    alert('⚠️ Format de clé invalide. Une clé Gemini commence par "AIza"');
+    return;
+  }
+  localStorage.setItem('gemini_api_key', key);
+  alert('✅ Clé API sauvegardée avec succès !');
+}
+
+function loadApiKey() {
+  const key = localStorage.getItem('gemini_api_key');
+  if (key) {
+    document.getElementById('apiKey').value = key;
+  }
+}
+
+// Charger la clé au démarrage
+window.addEventListener('DOMContentLoaded', loadApiKey);
+
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
@@ -432,7 +457,6 @@ if (!response.ok) {
 }
 
 const data = await response.json();
-const text = data.candidates[0].content.parts[0].text;
 
 // IMPORTANT: Extraction différente pour Gemini
 if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
