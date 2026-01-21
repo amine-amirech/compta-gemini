@@ -1470,6 +1470,81 @@ function exportToSage() {
       // 🆕 Message détaillé
       alert(`✅ Export N2F réussi !\n\nFournisseur: ${extractedData.fournisseur}\nFacture: ${numFacture}\nMontant: ${extractedData.montant_ttc.toFixed(2)} €\n\n${accountEntries.length} écritures générées`);
     }
+    function confirmAndExportBatch() {
+    if (batchInvoices.length === 0) {
+        alert("Aucune donnée à exporter.");
+        return;
+    }
+
+    let output = "";
+    const dateExport = new Date().toLocaleDateString('fr-FR').replace(/\//g, '');
+
+    batchInvoices.forEach(invoice => {
+        // Préparation des écritures pour CHAQUE facture (Point 1)
+        const entries = generateAccountingEntriesList(invoice);
+        
+        entries.forEach(e => {
+            const numFacture = (invoice.numeroFacture || "0").toString().substring(0, 5);
+            const code = "PI"; // Code journal
+            const date = (invoice.date || "").replace(/\//g, '').substring(0, 8);
+            
+            // Point 2 : On utilise referenceCommande qui est maintenant le libellé modifiable
+            let libelleSage = invoice.referenceCommande || invoice.fournisseur || "FACTURE";
+            libelleSage = removeAccents(libelleSage).toUpperCase().substring(0, 25);
+
+            const montantCentimes = Math.round(parseFloat(e.montant) * 100);
+            
+            // Format ligne Sage (Ligne par ligne)
+            const line = 
+                numFacture.padStart(5, ' ') + ',' +
+                code.padEnd(2, ' ') + ',' +
+                date.padEnd(8, ' ') + ',' +
+                ''.padEnd(20, ' ') + ',' +
+                e.compte.padEnd(11, ' ') + ',' +
+                libelleSage.padEnd(25, ' ') + ',' +
+                montantCentimes.toString().padStart(13, ' ') + ',' +
+                e.sens + ',' +
+                ''.padEnd(12, ' ') + ',' +
+                ''.padEnd(6, ' ') + ',' +
+                libelleSage.padEnd(34, ' ') + ',' +
+                '\r\n';
+            
+            output += line;
+        });
+    });
+
+    // Téléchargement du fichier unique (Point 4)
+    const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `EXPORT_SAGE_BATCH_${dateExport}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// Fonction auxiliaire pour transformer une facture en lignes comptables
+function generateAccountingEntriesList(data) {
+    const list = [];
+    const ht = parseFloat(data.montantHT) || 0;
+    const tva = parseFloat(data.montantTVA) || 0;
+    const ttc = parseFloat(data.montantTTC) || 0;
+
+    // Ligne Fournisseur (TTC)
+    list.push({ compte: "401000", montant: ttc, sens: "C" });
+    // Ligne Charge (HT)
+    list.push({ compte: "606000", montant: ht, sens: "D" });
+    // Ligne TVA
+    if (tva > 0) {
+        list.push({ compte: "445660", montant: tva, sens: "D" });
+    }
+    return list;
+}
+
+function removeAccents(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
   </script>
 </body>
 </html>
