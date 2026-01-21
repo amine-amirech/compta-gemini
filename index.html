@@ -437,29 +437,34 @@ function removeFile(index) {
             contents: [{
               parts: [
                 {
-                  text: `Tu es un expert-comptable français. Analyse cette facture avec PRÉCISION.
+                  text: `Tu es un expert-comptable français. Analyse cette facture avec PRÉCISION MAXIMALE.
 
-RÈGLES CRITIQUES :
-1. Le FOURNISSEUR est l'émetteur de la facture (en haut du document), JAMAIS le destinataire
-2. Si la facture mentionne "TVA 20%", "TVA 5.5%", "TVA 10%" → tva_taux = le taux indiqué
-3. Si la facture dit "TVA non applicable", "Autoliquidation", "UE" → est_intracomm = true
-4. Si le montant est négatif ou si c'est un "AVOIR" ou "NOTE DE CRÉDIT" → est_avoir = true
+⚠️ RÈGLE ABSOLUE SUR LA TVA :
+- Si tu vois un montant de TVA affiché (ex: "TVA 20%: 45,60€" ou "TVA 10%", etc.) → La facture EST française avec TVA
+- Si tu vois "TVA non applicable", "Autoliquidation", "Reverse charge", ou mention pays UE → ALORS c'est intracommunautaire
+- JAMAIS les deux en même temps !
 
-Extrais UNIQUEMENT ce JSON (sans markdown, sans texte) :
+RÈGLES D'EXTRACTION :
+1. FOURNISSEUR = émetteur de la facture (en-tête du document)
+2. Si TVA AFFICHÉE avec montant → tva_taux = le taux indiqué ET est_intracomm = false
+3. Si "TVA non applicable" OU fournisseur UE → tva_taux = 0 ET est_intracomm = true
+4. Si AVOIR ou montant négatif → est_avoir = true
+
+Réponds UNIQUEMENT avec ce JSON (sans markdown, sans texte) :
 {
-  "fournisseur": "NOM EXACT de l'émetteur de la facture (celui qui facture)",
-  "numero_facture": "numéro de facture",
-  "date": "date au format AAAAMMJJ",
+  "fournisseur": "nom émetteur",
+  "numero_facture": "numéro",
+  "date": "AAAAMMJJ",
   "montant_ht": nombre,
-  "tva_taux": nombre (20 si TVA 20%, 10 si TVA 10%, 5.5 si TVA 5.5%, 0 si intracommunautaire),
+  "tva_taux": nombre,
   "montant_tva": nombre,
   "montant_ttc": nombre,
-  "description": "objet/description de la facture en 5-10 mots max",
-  "reference_interne": "référence client/commande si présente (PDR-XX-XXXX ou similaire), sinon null",
-  "categorie_suggeree": "catégorie comptable pertinente",
-  "est_intracomm": true si TVA intracommunautaire/autoliquidation/UE mentionnée, false sinon,
-  "est_avoir": true si avoir/crédit/montant négatif, false sinon
-}
+  "description": "description courte",
+  "reference_interne": "ref client ou null",
+  "categorie_suggeree": "catégorie",
+  "est_intracomm": true si TVA non applicable/UE SEULEMENT,
+  "est_avoir": true si avoir/crédit
+}`
 
 VÉRIFIE 2 FOIS : le fournisseur est-il bien celui qui ÉMET la facture ?`
                 },
