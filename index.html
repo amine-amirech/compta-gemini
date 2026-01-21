@@ -1141,6 +1141,7 @@ async function analyzeInvoiceForBatch(file, apiKey) {
 
 RÈGLES D'EXTRACTION :
 1. FOURNISSEUR = émetteur de la facture (en-tête du document)
+1bis. REFERENCE_INTERNE = Extraire impérativement la référence de commande type PDR-XX-XXXXX (ex: PDR-24-00123)
 2. Si TVA AFFICHÉE avec montant → tva_taux = le taux indiqué ET est_intracomm = false
 3. Si "TVA non applicable" OU fournisseur UE → tva_taux = 0 ET est_intracomm = true
 4. Si AVOIR ou montant négatif → est_avoir = true
