@@ -533,32 +533,40 @@ async function processAllFiles() {
   let errorCount = 0;
 
   for (let i = 0; i < selectedFiles.length; i++) {
-    const file = selectedFiles[i];
+    const file = selectedFiles[i]; // ✅ Cette ligne est OK
     const progressText = document.getElementById('progressText');
     progressText.textContent = `Traitement de ${i + 1}/${selectedFiles.length}: ${file.name}`;
 
     try {
+      console.log(`[PROCESS] Début traitement fichier ${i + 1}: ${file.name}`); // LOG
       const invoiceData = await analyzeInvoiceForBatch(file, apiKey);
+      
       if (invoiceData) {
         allInvoicesData.push(invoiceData);
         successCount++;
+        console.log(`[PROCESS] ✅ Succès pour ${file.name}`); // LOG
       } else {
         errorCount++;
+        console.log(`[PROCESS] ⚠️ Aucune donnée retournée pour ${file.name}`); // LOG
       }
       
+      // Pause entre chaque fichier
       if (i < selectedFiles.length - 1) {
+        console.log('[PROCESS] ⏳ Pause 2 secondes...'); // LOG
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } catch (error) {
-      console.error(`Erreur sur ${file.name}:`, error);
+      console.error(`[PROCESS] ❌ Erreur sur fichier ${i + 1}:`, error); // LOG avec index
+      console.error(`[PROCESS] Nom du fichier en erreur: ${file.name}`); // LOG
       errorCount++;
     }
   }
 
   document.getElementById('loading').classList.add('hidden');
+  console.log(`[PROCESS] 🏁 Terminé: ${successCount} succès, ${errorCount} erreurs`); // LOG
   
   if (allInvoicesData.length > 0) {
-    displayBatchResults(allInvoicesData); // NOUVEAU : affiche les résultats
+    displayBatchResults(allInvoicesData);
     alert(`✅ Traitement terminé !\n${successCount} factures traitées avec succès\n${errorCount} erreurs\n\nVérifiez les résultats ci-dessous avant d'exporter.`);
   } else {
     alert('❌ Aucune facture n\'a pu être traitée');
