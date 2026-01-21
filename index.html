@@ -11,29 +11,30 @@
     <div class="bg-white rounded-xl shadow-xl p-8">
       <h1 class="text-3xl font-bold text-gray-800 mb-2">Générateur d'écritures comptables N2F / Sage</h1>
       <p class="text-gray-600 mb-8">Importez une facture PDF et générez automatiquement l'écriture comptable</p>
+      
       <!-- Configuration API Gemini -->
-<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-  <div class="flex items-start">
-    <div class="flex-shrink-0">
-      <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-      </svg>
-    </div>
-    <div class="ml-3 flex-1">
-      <p class="text-sm text-yellow-700 font-semibold mb-2">⚙️ Configuration requise</p>
-      <div class="flex gap-2">
-        <input type="password" id="apiKey" placeholder="Votre API ici" class="flex-1 px-3 py-2 border rounded-lg text-sm">
-        <button onclick="saveApiKey()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm whitespace-nowrap">
-          💾 Sauvegarder
-        </button>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm whitespace-nowrap">
-          🔑 Obtenir clé
-        </a>
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <p class="text-sm text-yellow-700 font-semibold mb-2">⚙️ Configuration requise</p>
+            <div class="flex gap-2">
+              <input type="password" id="apiKey" placeholder="Votre API ici" class="flex-1 px-3 py-2 border rounded-lg text-sm">
+              <button onclick="saveApiKey()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm whitespace-nowrap">
+                💾 Sauvegarder
+              </button>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm whitespace-nowrap">
+                🔑 Obtenir clé
+              </a>
+            </div>
+            <p class="text-xs text-yellow-600 mt-2">📌 La clé est stockée localement dans votre navigateur</p>
+          </div>
+        </div>
       </div>
-      <p class="text-xs text-yellow-600 mt-2">📌 La clé est stockée localement dans votre navigateur</p>
-    </div>
-  </div>
-</div>
 
       <div class="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-200">
         <h2 class="text-lg font-semibold text-gray-800 mb-4">Paramètres</h2>
@@ -337,30 +338,28 @@
       { code: '445200', label: 'TVA collectée Intracomm' },
     ];
 
-    // Gestion de la clé API Gemini
-function saveApiKey() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key) {
-    alert('⚠️ Veuillez entrer une clé API');
-    return;
-  }
-  if (!key.startsWith('AIza')) {
-    alert('⚠️ Format de clé invalide. Une clé Gemini commence par "AIza"');
-    return;
-  }
-  localStorage.setItem('gemini_api_key', key);
-  alert('✅ Clé API sauvegardée avec succès !');
-}
+    function saveApiKey() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) {
+        alert('⚠️ Veuillez entrer une clé API');
+        return;
+      }
+      if (!key.startsWith('AIza')) {
+        alert('⚠️ Format de clé invalide. Une clé Gemini commence par "AIza"');
+        return;
+      }
+      localStorage.setItem('gemini_api_key', key);
+      alert('✅ Clé API sauvegardée avec succès !');
+    }
 
-function loadApiKey() {
-  const key = localStorage.getItem('gemini_api_key');
-  if (key) {
-    document.getElementById('apiKey').value = key;
-  }
-}
+    function loadApiKey() {
+      const key = localStorage.getItem('gemini_api_key');
+      if (key) {
+        document.getElementById('apiKey').value = key;
+      }
+    }
 
-// Charger la clé au démarrage
-window.addEventListener('DOMContentLoaded', loadApiKey);
+    window.addEventListener('DOMContentLoaded', loadApiKey);
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
@@ -385,7 +384,7 @@ window.addEventListener('DOMContentLoaded', loadApiKey);
       console.log('1. Début analyse', file.name);
       document.getElementById('loading').classList.remove('hidden');
       document.getElementById('fileName').textContent = file.name;
-
+      
       const reader = new FileReader();
       reader.onload = async () => {
         console.log('2. Fichier lu');
@@ -395,21 +394,21 @@ window.addEventListener('DOMContentLoaded', loadApiKey);
         try {
           console.log('4. Appel API...');
           const apiKey = localStorage.getItem('gemini_api_key');
-if (!apiKey) {
-  alert('⚠️ Veuillez configurer votre clé API Gemini');
-  document.getElementById('loading').classList.add('hidden');
-  return;
-}
+          
+          if (!apiKey) {
+            alert('⚠️ Veuillez configurer votre clé API Gemini');
+            document.getElementById('loading').classList.add('hidden');
+            return;
+          }
 
-const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-  
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    contents: [{
-      parts: [
-        {
-          text: `Analyse cette facture et extrais UNIQUEMENT le JSON suivant (sans texte avant ou après, sans markdown) :
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  {
+                    text: `Analyse cette facture et extrais UNIQUEMENT le JSON suivant (sans texte avant ou après, sans markdown) :
 {
   "fournisseur": "nom du fournisseur",
   "numero_facture": "numéro de facture",
@@ -426,68 +425,64 @@ const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/m
 }
 
 Réponds UNIQUEMENT avec le JSON valide, rien d'autre.`
-        },
-        {
-          inline_data: {
-            mime_type: 'application/pdf',
-            data: base64
+                  },
+                  {
+                    inline_data: {
+                      mime_type: 'application/pdf',
+                      data: base64
+                    }
+                  }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 1024
+              }
+            })
+          });
+
+          console.log('5. Réponse reçue, status:', response.status);
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Erreur API:', errorData);
+            
+            if (response.status === 429) {
+              throw new Error('Quota Gemini dépassé. Attendez 1 minute et réessayez.');
+            } else if (response.status === 400) {
+              throw new Error('Clé API invalide. Vérifiez votre clé sur https://aistudio.google.com/app/apikey');
+            } else {
+              throw new Error(`Erreur API (${response.status}): ${errorData.error?.message || 'Erreur inconnue'}`);
+            }
           }
-        }
-      ]
-    }],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 1024
-    }
-  })
-});
 
-console.log('5. Réponse reçue, status:', response.status);
+          const data = await response.json();
 
-if (!response.ok) {
-  const errorData = await response.json().catch(() => ({}));
-  console.error('Erreur API:', errorData);
-  
-  if (response.status === 429) {
-    throw new Error('Quota Gemini dépassé. Attendez 1 minute et réessayez.');
-  } else if (response.status === 400) {
-    throw new Error('Clé API invalide. Vérifiez votre clé sur https://aistudio.google.com/app/apikey');
-  } else {
-    throw new Error(`Erreur API (${response.status}): ${errorData.error?.message || 'Erreur inconnue'}`);
-  }
-}
+          if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            throw new Error('Réponse API invalide - pas de contenu');
+          }
 
-const data = await response.json();
+          const text = data.candidates[0].content.parts[0].text;
+          console.log('7. Texte brut:', text);
 
-// IMPORTANT: Extraction différente pour Gemini
-if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-  throw new Error('Réponse API invalide - pas de contenu');
-}
+          const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          console.log('8. Texte nettoyé:', cleanText);
 
-const text = data.candidates[0].content.parts[0].text;
-console.log('7. Texte brut:', text);
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('Pas de JSON trouvé dans la réponse');
 
-// Nettoyer les balises markdown si présentes
-const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-console.log('8. Texte nettoyé:', cleanText);
+          const jsonText = jsonMatch[0];
+          console.log('9. JSON extrait:', jsonText);
+          extractedData = JSON.parse(jsonText);
+          console.log('10. JSON parsé:', extractedData);
 
-const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
-if (!jsonMatch) throw new Error('Pas de JSON trouvé dans la réponse');
-
-const jsonText = jsonMatch[0];
-console.log('9. JSON extrait:', jsonText);
-extractedData = JSON.parse(jsonText);
-console.log('10. JSON parsé:', extractedData);
-
-displayResults();
-generateEntries();
+          displayResults();
+          generateEntries();
+          
         } catch (error) {
           console.error('ERREUR:', error);
           document.getElementById('loading').classList.add('hidden');
-          
-          // Affichage d'une alerte plus informative
-          const errorMsg = error.message || 'Erreur inconnue';
-          alert('❌ ' + errorMsg + '\n\nSi l\'erreur persiste, attendez quelques secondes avant de réessayer.');
+          alert('❌ ' + error.message);
           return;
         }
         
@@ -514,7 +509,6 @@ generateEntries();
         ${isIntracomm ? '<div class="col-span-3"><span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">INTRACOMMUNAUTAIRE</span></div>' : ''}
       `;
       
-      // Afficher bouton autoliquidation si facture UE sans TVA
       if (isIntracomm && !isAvoir) {
         document.getElementById('intracommButton').classList.remove('hidden');
       } else {
@@ -523,7 +517,6 @@ generateEntries();
     }
 
     function generateEntries() {
-      // Utiliser le numéro de facture extrait au lieu du champ input
       const numFacture = extractedData.numero_facture || document.getElementById('numEcriture').value;
       const code = document.getElementById('codeJournal').value;
       const piece = numFacture + code + extractedData.date;
@@ -683,7 +676,6 @@ generateEntries();
       
       let output = '';
       accountEntries.forEach(e => {
-        // Libellé: Référence + Fournisseur si référence existe, sinon Fournisseur seul
         let libelle = '';
         if (extractedData.reference_interne) {
           libelle = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
@@ -692,7 +684,6 @@ generateEntries();
         }
         libelle = libelle.substring(0, 25);
         
-        // Construction description avec référence si présente
         let description = '';
         if (extractedData.reference_interne) {
           description = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
@@ -705,7 +696,6 @@ generateEntries();
         }
         description = description.substring(0, 34);
         
-        // FIX: Double arrondi comme N2F
         const montantArrondi = Math.round(parseFloat(e.montant) * 100) / 100;
         const montantCentimes = Math.round(montantArrondi * 100);
         
