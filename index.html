@@ -1234,7 +1234,6 @@ function displayResults() {
     }
 
 function generateEntries() {
-      // Vérification de sécurité
       if (!extractedData) {
         console.error('[generateEntries] extractedData est null');
         return;
@@ -1249,30 +1248,29 @@ function generateEntries() {
       
       accountEntries = [];
       
-        if (isAvoir) {
-        // 🆕 AVOIR AVEC TVA CORRECTE
+      if (isAvoir) {
         const montantHTAvoir = Math.abs(extractedData.montant_ht);
         const montantTVAAvoir = Math.abs(extractedData.montant_tva);
         const montantTTCAvoir = Math.abs(extractedData.montant_ttc);
         
         accountEntries.push(
-          { piece, accountType: 'fournisseur', compte: '', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
-          { piece, accountType: 'charge', compte: '', montant: montantHTAvoir.toFixed(2), sens: 'C' },
+          { piece, accountType: 'fournisseur', compte: '4010FD', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
+          { piece, accountType: 'charge', compte: '601000', montant: montantHTAvoir.toFixed(2), sens: 'C' },
           { piece, accountType: 'tva', compte: '445667', montant: montantTVAAvoir.toFixed(2), sens: 'C' }
         );
       } else if (isIntracomm) {
         const tvaIntra = (extractedData.montant_ht * 0.20).toFixed(2);
         accountEntries.push(
-          { piece, accountType: 'charge', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
+          { piece, accountType: 'charge', compte: '601100', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
           { piece, accountType: 'tva', compte: '445668', montant: tvaIntra, sens: 'D' },
           { piece, accountType: 'tva', compte: '445200', montant: tvaIntra, sens: 'C' },
-          { piece, accountType: 'fournisseur', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'C' }
+          { piece, accountType: 'fournisseur', compte: '4010FD', montant: extractedData.montant_ht.toFixed(2), sens: 'C' }
         );
       } else {
         accountEntries.push(
-          { piece, accountType: 'charge', compte: '', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
+          { piece, accountType: 'charge', compte: '606110', montant: extractedData.montant_ht.toFixed(2), sens: 'D' },
           { piece, accountType: 'tva', compte: '445667', montant: extractedData.montant_tva.toFixed(2), sens: 'D' },
-          { piece, accountType: 'fournisseur', compte: '', montant: extractedData.montant_ttc.toFixed(2), sens: 'C' }
+          { piece, accountType: 'fournisseur', compte: '4010FD', montant: extractedData.montant_ttc.toFixed(2), sens: 'C' }
         );
       }
 
