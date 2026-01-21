@@ -546,7 +546,6 @@ async function processAllFiles() {
         errorCount++;
       }
       
-      // Délai de 2 secondes entre chaque appel pour éviter rate limit
       if (i < selectedFiles.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
@@ -559,17 +558,74 @@ async function processAllFiles() {
   document.getElementById('loading').classList.add('hidden');
   
   if (allInvoicesData.length > 0) {
-    exportMultipleInvoices(allInvoicesData);
-    alert(`✅ Traitement terminé !\n${successCount} factures traitées avec succès\n${errorCount} erreurs`);
+    displayBatchResults(allInvoicesData); // NOUVEAU : affiche les résultats
+    alert(`✅ Traitement terminé !\n${successCount} factures traitées avec succès\n${errorCount} erreurs\n\nVérifiez les résultats ci-dessous avant d'exporter.`);
   } else {
     alert('❌ Aucune facture n\'a pu être traitée');
   }
   
-  // Réinitialiser
   selectedFiles = [];
-  document.getElementById('fileName').textContent = '';
-}  
-
+}
+function displayBatchResults(allInvoicesData) {
+  let batchData = [];
+  
+  document.getElementById('results').classList.remove('hidden');
+  
+  const html = `
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+      <h3 class="font-semibold text-green-800 mb-2">📊 Résultats du traitement batch</h3>
+      <p class="text-sm text-green-700">${allInvoicesData.length} facture(s) analysée(s)</p>
+    </div>
+    
+    <div class="space-y-4 mb-6">
+      ${allInvoicesData.map((inv, idx) => `
+        <div class="border rounded-lg p-4 ${inv.est_intracomm ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <h4 class="font-semibold text-lg">${idx + 1}. ${inv.fournisseur}</h4>
+              <p class="text-sm text-gray-600">${inv.filename}</p>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-lg">${inv.montant_ttc.toFixed(2)} €</p>
+              <p class="text-xs text-gray-500">TTC</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-4 gap-3 text-sm">
+            <div><span class="text-gray-500">N° Facture:</span> <strong>${inv.numero_facture}</strong></div>
+            <div><span class="text-gray-500">Date:</span> <strong>${inv.date}</strong></div>
+            <div><span class="text-gray-500">HT:</span> <strong>${inv.montant_ht.toFixed(2)} €</strong></div>
+            <div><span class="text-gray-500">TVA ${inv.tva_taux}%:</span> <strong>${inv.montant_tva.toFixed(2)} €</strong></div>
+          </div>
+          
+          ${inv.est_intracomm ? '<span class="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">INTRACOMMUNAUTAIRE</span>' : ''}
+          ${inv.est_avoir ? '<span class="inline-block mt-2 px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-semibold">AVOIR</span>' : ''}
+        </div>
+      `).join('')}
+    </div>
+    
+    <button onclick="confirmAndExportBatch()" 
+        class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
+  💾 Exporter toutes les factures pour N2F / Sage
+</button>
+  `;
+  
+  document.getElementById('extractedData').innerHTML = html;
+  document.getElementById('entriesTable').innerHTML = '';
+  
+  window.batchInvoicesData = allInvoicesData;
+}
+      function confirmAndExportBatch() {
+  if (!window.batchInvoicesData || window.batchInvoicesData.length === 0) {
+    alert('❌ Aucune donnée à exporter');
+    return;
+  }
+  
+  const count = window.batchInvoicesData.length;
+  if (confirm(`Exporter ${count} facture(s) vers N2F/Sage ?`)) {
+    exportMultipleInvoices(window.batchInvoicesData);
+  }
+}
     function exportMultipleInvoices(allInvoicesData) {
   const code = document.getElementById('codeJournal').value;
   const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -580,7 +636,7 @@ async function processAllFiles() {
     const numFacture = invoiceData.numero_facture;
     const date = invoiceData.date;
     const isAvoir = invoiceData.est_avoir || invoiceData.montant_ht < 0;
-    const isIntracomm = invoiceData.est_intracomm || invoiceData.tva_taux === 0;
+    const isIntracomm = invoiceData.est_intracomm === true;
     
     let entries = [];
     
@@ -782,7 +838,7 @@ Réponds UNIQUEMENT avec le JSON valide, rien d'autre.`
       document.getElementById('results').classList.remove('hidden');
       
       const isAvoir = extractedData.est_avoir || extractedData.montant_ht < 0;
-      const isIntracomm = extractedData.est_intracomm || extractedData.tva_taux === 0;
+      const isIntracomm = extractedData.est_intracomm === true;
       
       document.getElementById('extractedData').innerHTML = `
         <div><p class="text-sm text-gray-500">Fournisseur</p><p class="font-semibold">${extractedData.fournisseur}</p></div>
@@ -809,7 +865,7 @@ Réponds UNIQUEMENT avec le JSON valide, rien d'autre.`
       const piece = numFacture + code + extractedData.date;
       
       const isAvoir = extractedData.est_avoir || extractedData.montant_ht < 0;
-      const isIntracomm = extractedData.est_intracomm || extractedData.tva_taux === 0;
+      const isIntracomm = extractedData.est_intracomm === true;
       
       accountEntries = [];
       
