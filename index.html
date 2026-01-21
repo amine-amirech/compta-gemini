@@ -814,40 +814,24 @@ function removeInvoiceFromBatch(index) {
   }
 }
 
-// 🆕 Fonction pour prévisualiser les écritures d'une facture
 function previewInvoiceEntries(index) {
   const inv = window.batchInvoicesData[index];
-  const isAvoir = inv.est_avoir || inv.montant_ht < 0;
-  const isIntracomm = inv.est_intracomm === true;
   
-  let entries = [];
+  // 🔧 CORRECTION 1: Générer les vraies écritures
+  const previousData = extractedData;
+  extractedData = inv;
+  generateEntries();
   
-  if (isAvoir) {
-    // 🆕 AVOIR AVEC TVA CORRECTE
-    const montantHTAvoir = Math.abs(inv.montant_ht);
-    const montantTVAAvoir = Math.abs(inv.montant_tva);
-    const montantTTCAvoir = Math.abs(inv.montant_ttc);
-    
-    entries.push(
-      { type: 'Fournisseur', compte: '4010FD', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
-      { type: 'Charge', compte: '601000', montant: montantHTAvoir.toFixed(2), sens: 'C' },
-      { type: 'TVA', compte: '445667', montant: montantTVAAvoir.toFixed(2), sens: 'C' }
-    );
-  } else if (isIntracomm) {
-    const tvaIntra = (inv.montant_ht * 0.20).toFixed(2);
-    entries.push(
-      { type: 'Charge', compte: '601100', montant: inv.montant_ht.toFixed(2), sens: 'D' },
-      { type: 'TVA déd.', compte: '445668', montant: tvaIntra, sens: 'D' },
-      { type: 'TVA coll.', compte: '445200', montant: tvaIntra, sens: 'C' },
-      { type: 'Fournisseur', compte: '4010FD', montant: inv.montant_ht.toFixed(2), sens: 'C' }
-    );
-  } else {
-    entries.push(
-      { type: 'Charge', compte: '606110', montant: inv.montant_ht.toFixed(2), sens: 'D' },
-      { type: 'TVA', compte: '445667', montant: inv.montant_tva.toFixed(2), sens: 'D' },
-      { type: 'Fournisseur', compte: '4010FD', montant: inv.montant_ttc.toFixed(2), sens: 'C' }
-    );
-  }
+  const entries = accountEntries.map(e => ({
+    type: e.accountType === 'charge' ? 'Charge' : 
+          e.accountType === 'fournisseur' ? 'Fournisseur' : 'TVA',
+    compte: e.compte || '⚠️ NON DÉFINI',
+    montant: e.montant,
+    sens: e.sens
+  }));
+  
+  extractedData = previousData;
+  if (extractedData) generateEntries();
   
   const entriesHtml = entries.map(e => 
     `<tr class="border-t">
