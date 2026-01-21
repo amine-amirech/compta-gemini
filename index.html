@@ -150,6 +150,130 @@
     let currentAccountType = null;
     let selectedFiles = [];
 
+    // 🆕 FONCTIONS DE GESTION DES COMPTES
+    function openAccountManager(type) {
+      currentAccountType = type;
+      const modal = document.getElementById('accountModal');
+      const title = document.getElementById('modalTitle');
+      
+      const titles = {
+        'charge': '💼 Gestion des Comptes de Charges',
+        'fournisseur': '🏢 Gestion des Comptes Fournisseurs',
+        'tva': '📊 Gestion des Comptes TVA'
+      };
+      
+      title.textContent = titles[type] || 'Gestion des comptes';
+      displayAccountsList();
+      modal.classList.remove('hidden');
+    }
+    
+    function closeAccountManager() {
+      document.getElementById('accountModal').classList.add('hidden');
+      currentAccountType = null;
+      document.getElementById('newAccountCode').value = '';
+      document.getElementById('newAccountLabel').value = '';
+    }
+    
+    function displayAccountsList() {
+      const listDiv = document.getElementById('accountsList');
+      let accounts = [];
+      
+      if (currentAccountType === 'charge') accounts = comptesCharges;
+      else if (currentAccountType === 'fournisseur') accounts = comptesFournisseurs;
+      else if (currentAccountType === 'tva') accounts = comptesTVA;
+      
+      listDiv.innerHTML = accounts.map((acc, idx) => `
+        <div class="flex items-center justify-between p-2 bg-gray-50 rounded border">
+          <div class="flex-1">
+            <span class="font-mono font-semibold text-sm">${acc.code}</span>
+            <span class="text-gray-600 text-sm ml-3">${acc.label}</span>
+          </div>
+          <button onclick="deleteAccount(${idx})" class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs">
+            🗑️
+          </button>
+        </div>
+      `).join('');
+    }
+    
+    function addNewAccount() {
+      const code = document.getElementById('newAccountCode').value.trim();
+      const label = document.getElementById('newAccountLabel').value.trim();
+      
+      if (!code || !label) {
+        alert('⚠️ Veuillez renseigner le code et le libellé');
+        return;
+      }
+      
+      if (currentAccountType === 'charge') {
+        comptesCharges.push({ code, label });
+        comptesCharges.sort((a, b) => a.code.localeCompare(b.code));
+      } else if (currentAccountType === 'fournisseur') {
+        comptesFournisseurs.push({ code, label });
+        comptesFournisseurs.sort((a, b) => a.code.localeCompare(b.code));
+      } else if (currentAccountType === 'tva') {
+        comptesTVA.push({ code, label });
+      }
+      
+      document.getElementById('newAccountCode').value = '';
+      document.getElementById('newAccountLabel').value = '';
+      displayAccountsList();
+      alert('✅ Compte ajouté avec succès');
+    }
+    
+    function deleteAccount(index) {
+      if (!confirm('⚠️ Supprimer ce compte ?')) return;
+      
+      if (currentAccountType === 'charge') {
+        comptesCharges.splice(index, 1);
+      } else if (currentAccountType === 'fournisseur') {
+        comptesFournisseurs.splice(index, 1);
+      } else if (currentAccountType === 'tva') {
+        comptesTVA.splice(index, 1);
+      }
+      
+      displayAccountsList();
+      alert('✅ Compte supprimé');
+    }
+    
+    function getAccountsByType(type) {
+      if (type === 'charge') return comptesCharges;
+      if (type === 'fournisseur') return comptesFournisseurs;
+      if (type === 'tva') return comptesTVA;
+      return [];
+    }
+    
+function updateAccount(index, compte) {
+      accountEntries[index].compte = compte;
+      console.log(`Compte ${index} mis à jour:`, compte);
+    }
+    
+    // 🆕 FONCTION AVEC RAFRAICHISSEMENT VISUEL
+    function updateAccountAndRefresh(index, compte) {
+      accountEntries[index].compte = compte;
+      
+      // Rafraîchir visuellement le select
+      const selectElement = document.getElementById(`account-select-${index}`);
+      if (selectElement) {
+        if (compte) {
+          selectElement.classList.remove('border-red-300', 'bg-red-50');
+          selectElement.classList.add('border-green-300', 'bg-green-50');
+          
+          // Message de confirmation temporaire
+          const row = selectElement.closest('tr');
+          const originalBg = row.className;
+          row.className = 'border-t bg-green-100';
+          setTimeout(() => {
+            row.className = originalBg;
+          }, 500);
+        } else {
+          selectElement.classList.remove('border-green-300', 'bg-green-50');
+          selectElement.classList.add('border-red-300', 'bg-red-50');
+        }
+      }
+      
+      console.log(`✅ Compte ligne ${index + 1} modifié: ${compte}`);
+    }
+
     let comptesCharges = [
       { code: '601000', label: 'FR - MP & Serv. INDUCTEURS' },
       { code: '601001', label: 'FR - MP PDR' },
@@ -699,9 +823,15 @@ function previewInvoiceEntries(index) {
   let entries = [];
   
   if (isAvoir) {
+    // 🆕 AVOIR AVEC TVA CORRECTE
+    const montantHTAvoir = Math.abs(inv.montant_ht);
+    const montantTVAAvoir = Math.abs(inv.montant_tva);
+    const montantTTCAvoir = Math.abs(inv.montant_ttc);
+    
     entries.push(
-      { type: 'Fournisseur', compte: '4010FD', montant: Math.abs(inv.montant_ttc).toFixed(2), sens: 'D' },
-      { type: 'Charge', compte: '601000', montant: Math.abs(inv.montant_ttc).toFixed(2), sens: 'C' }
+      { type: 'Fournisseur', compte: '4010FD', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
+      { type: 'Charge', compte: '601000', montant: montantHTAvoir.toFixed(2), sens: 'C' },
+      { type: 'TVA', compte: '445667', montant: montantTVAAvoir.toFixed(2), sens: 'C' }
     );
   } else if (isIntracomm) {
     const tvaIntra = (inv.montant_ht * 0.20).toFixed(2);
@@ -820,10 +950,16 @@ function exportMultipleInvoices(allInvoicesData) {
     let entries = [];
     
     // Générer les écritures selon le type de facture
-    if (isAvoir) {
+     if (isAvoir) {
+      // 🆕 AVOIR AVEC TVA CORRECTE
+      const montantHTAvoir = Math.abs(invoiceData.montant_ht);
+      const montantTVAAvoir = Math.abs(invoiceData.montant_tva);
+      const montantTTCAvoir = Math.abs(invoiceData.montant_ttc);
+      
       entries.push(
-        { accountType: 'fournisseur', compte: '4010FD', montant: Math.abs(invoiceData.montant_ttc).toFixed(2), sens: 'D' },
-        { accountType: 'charge', compte: '601000', montant: Math.abs(invoiceData.montant_ttc).toFixed(2), sens: 'C' }
+        { accountType: 'fournisseur', compte: '4010FD', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
+        { accountType: 'charge', compte: '601000', montant: montantHTAvoir.toFixed(2), sens: 'C' },
+        { accountType: 'tva', compte: '445667', montant: montantTVAAvoir.toFixed(2), sens: 'C' }
       );
     } else if (isIntracomm) {
       const tvaIntra = (invoiceData.montant_ht * 0.20).toFixed(2);
@@ -842,9 +978,15 @@ function exportMultipleInvoices(allInvoicesData) {
     }
     
     // Générer les lignes d'export
-    entries.forEach(e => {
+      entries.forEach(e => {
+      // 🆕 EXTRACTION REFERENCE PDR-XX-XXXX
+      const pdrMatch = invoiceData.description ? invoiceData.description.match(/PDR-\d{2}-\d{4}/i) : null;
+      const referencePDR = pdrMatch ? pdrMatch[0].toUpperCase() : null;
+      
       let libelle = '';
-      if (invoiceData.reference_interne) {
+      if (referencePDR) {
+        libelle = removeAccents(referencePDR + ' ' + invoiceData.fournisseur);
+      } else if (invoiceData.reference_interne) {
         libelle = removeAccents(invoiceData.reference_interne + ' ' + invoiceData.fournisseur);
       } else {
         libelle = removeAccents(invoiceData.fournisseur);
@@ -852,7 +994,9 @@ function exportMultipleInvoices(allInvoicesData) {
       libelle = libelle.substring(0, 25);
       
       let description = '';
-      if (invoiceData.reference_interne) {
+      if (referencePDR) {
+        description = removeAccents(referencePDR + ' ' + invoiceData.fournisseur);
+      } else if (invoiceData.reference_interne) {
         description = removeAccents(invoiceData.reference_interne + ' ' + invoiceData.fournisseur);
       } else {
         description = removeAccents(
@@ -1121,10 +1265,16 @@ function generateEntries() {
       
       accountEntries = [];
       
-      if (isAvoir) {
+        if (isAvoir) {
+        // 🆕 AVOIR AVEC TVA CORRECTE
+        const montantHTAvoir = Math.abs(extractedData.montant_ht);
+        const montantTVAAvoir = Math.abs(extractedData.montant_tva);
+        const montantTTCAvoir = Math.abs(extractedData.montant_ttc);
+        
         accountEntries.push(
-          { piece, accountType: 'fournisseur', compte: '', montant: Math.abs(extractedData.montant_ttc).toFixed(2), sens: 'D' },
-          { piece, accountType: 'charge', compte: '', montant: Math.abs(extractedData.montant_ttc).toFixed(2), sens: 'C' }
+          { piece, accountType: 'fournisseur', compte: '', montant: montantTTCAvoir.toFixed(2), sens: 'D' },
+          { piece, accountType: 'charge', compte: '', montant: montantHTAvoir.toFixed(2), sens: 'C' },
+          { piece, accountType: 'tva', compte: '445667', montant: montantTVAAvoir.toFixed(2), sens: 'C' }
         );
       } else if (isIntracomm) {
         const tvaIntra = (extractedData.montant_ht * 0.20).toFixed(2);
@@ -1154,7 +1304,7 @@ function generateEntries() {
             }">${e.accountType}</span>
           </td>
           <td class="px-4 py-2">
-            <select onchange="updateAccount(${i}, this.value)" class="border rounded px-2 py-1 w-full text-sm ${!e.compte ? 'border-red-300 bg-red-50' : 'border-gray-300'}">
+            <select id="account-select-${i}" onchange="updateAccountAndRefresh(${i}, this.value)" class="border rounded px-2 py-1 w-full text-sm ${!e.compte ? 'border-red-300 bg-red-50' : 'border-gray-300'}">
               <option value="">-- Sélectionner --</option>
               ${getAccountsByType(e.accountType).map(a => 
                 `<option value="${a.code}" ${e.compte === a.code ? 'selected' : ''}>${a.code} - ${a.label}</option>`
@@ -1205,9 +1355,15 @@ function exportToSage() {
       const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       
       let output = '';
-      accountEntries.forEach(e => {
+       accountEntries.forEach(e => {
+        // 🆕 EXTRACTION REFERENCE PDR-XX-XXXX
+        const pdrMatch = extractedData.description ? extractedData.description.match(/PDR-\d{2}-\d{4}/i) : null;
+        const referencePDR = pdrMatch ? pdrMatch[0].toUpperCase() : null;
+        
         let libelle = '';
-        if (extractedData.reference_interne) {
+        if (referencePDR) {
+          libelle = removeAccents(referencePDR + ' ' + extractedData.fournisseur);
+        } else if (extractedData.reference_interne) {
           libelle = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
         } else {
           libelle = removeAccents(extractedData.fournisseur);
@@ -1215,7 +1371,9 @@ function exportToSage() {
         libelle = libelle.substring(0, 25);
         
         let description = '';
-        if (extractedData.reference_interne) {
+        if (referencePDR) {
+          description = removeAccents(referencePDR + ' ' + extractedData.fournisseur);
+        } else if (extractedData.reference_interne) {
           description = removeAccents(extractedData.reference_interne + ' ' + extractedData.fournisseur);
         } else {
           description = removeAccents(
