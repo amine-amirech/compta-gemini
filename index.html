@@ -82,38 +82,41 @@
   <p id="progressText" class="text-sm text-gray-500 mt-2"></p>
 </div>
 
-      <div id="results" class="hidden">
-        <div class="bg-gray-50 rounded-lg p-6 mb-6">
-          <h2 class="text-xl font-semibold mb-4">Données extraites</h2>
-          <div id="extractedData" class="grid grid-cols-3 gap-4"></div>
-          <div id="intracommButton" class="hidden mt-4">
-            <button onclick="applyAutoliquidation()" class="px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600">
-              🇪🇺 Appliquer Autoliquidation TVA Intracommunautaire
+<div id="results" class="hidden space-y-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-gray-800">Écritures comptables des factures traitées</h2>
+            <button id="mainExportBtn" onclick="confirmAndExportBatch()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+              <span>💾</span> Exporter tout vers Sage (.txt)
             </button>
           </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">N° Facture</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Fournisseur</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Libellé / Réf. PDR (Modifiable)</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">HT</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">TVA</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">TTC</th>
+                  <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Type</th>
+                  <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="batchBody" class="bg-white divide-y divide-gray-200 text-sm">
+                </tbody>
+            </table>
+          </div>
         </div>
-<div id="batchContainer" class="mb-6">
-  <h2 class="text-xl font-semibold mb-4 text-gray-800">📋 Factures traitées dans ce lot</h2>
-  <div class="overflow-x-auto bg-white rounded-xl shadow-sm border">
-    <table class="w-full text-left border-collapse">
-      <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-bold">
-        <tr>
-          <th class="px-4 py-3 border-b">N° Facture</th>
-          <th class="px-4 py-3 border-b">Date</th>
-          <th class="px-4 py-3 border-b">Réf. PDR / Commande</th>
-          <th class="px-4 py-3 border-b">Fournisseur</th>
-          <th class="px-4 py-3 border-b text-right">HT</th>
-          <th class="px-4 py-3 border-b text-right">TVA</th>
-          <th class="px-4 py-3 border-b text-right">TTC</th>
-          <th class="px-4 py-3 border-b text-center">Type</th>
-        </tr>
-      </thead>
-      <tbody id="batchBody" class="divide-y text-sm">
-        </tbody>
-    </table>
-  </div>
-</div>
-
+        
+        <div class="flex justify-end">
+          <button onclick="resetBatch()" class="text-gray-500 hover:text-red-600 text-sm font-medium flex items-center gap-1">
+            <span>🔄</span> Réinitialiser la session
+          </button>
+        </div>
       </div>
     </div>
   </div>
