@@ -914,7 +914,6 @@ function confirmAndExportBatch() {
 function exportMultipleInvoices(allInvoicesData) {
   const code = document.getElementById('codeJournal').value;
   
-  // 🆕 Validation du code journal
   if (!code || code.length !== 2) {
     alert('⚠️ Le code journal doit contenir exactement 2 caractères');
     return;
@@ -923,7 +922,7 @@ function exportMultipleInvoices(allInvoicesData) {
   const removeAccents = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   
   let output = '';
-  let totalLines = 0; // 🆕 Compteur de lignes
+  let totalLines = 0;
   
   allInvoicesData.forEach(invoiceData => {
     const numFacture = invoiceData.numero_facture;
@@ -931,11 +930,10 @@ function exportMultipleInvoices(allInvoicesData) {
     const isAvoir = invoiceData.est_avoir || invoiceData.montant_ht < 0;
     const isIntracomm = invoiceData.est_intracomm === true;
     
+    // 🔧 CORRECTION: Générer les écritures pour CHAQUE facture
     let entries = [];
     
-    // Générer les écritures selon le type de facture
-     if (isAvoir) {
-      // 🆕 AVOIR AVEC TVA CORRECTE
+    if (isAvoir) {
       const montantHTAvoir = Math.abs(invoiceData.montant_ht);
       const montantTVAAvoir = Math.abs(invoiceData.montant_tva);
       const montantTTCAvoir = Math.abs(invoiceData.montant_ttc);
@@ -961,17 +959,33 @@ function exportMultipleInvoices(allInvoicesData) {
       );
     }
     
-    // Générer les lignes d'export
-      entries.forEach(e => {
-      // 🆕 EXTRACTION REFERENCE PDR-XX-XXXX
-      const pdrMatch = invoiceData.description ? invoiceData.description.match(/PDR-\d{2}-\d{4}/i) : null;
-      const referencePDR = pdrMatch ? pdrMatch[0].toUpperCase() : null;
+    // 🔧 CORRECTION: Extraction PDR améliorée (chercher partout)
+    entries.forEach(e => {
+      let referencePDR = null;
+      
+      // Chercher PDR dans description
+      if (invoiceData.description) {
+        const match = invoiceData.description.match(/PDR-\d{2}-\d{4}/i);
+        if (match) referencePDR = match[0].toUpperCase();
+      }
+      
+      // Chercher dans reference_interne
+      if (!referencePDR && invoiceData.reference_interne) {
+        const match = invoiceData.reference_interne.match(/PDR-\d{2}-\d{4}/i);
+        if (match) referencePDR = match[0].toUpperCase();
+      }
+      
+      // Chercher dans numero_facture
+      if (!referencePDR && invoiceData.numero_facture) {
+        const match = invoiceData.numero_facture.match(/PDR-\d{2}-\d{4}/i);
+        if (match) referencePDR = match[0].toUpperCase();
+      }
       
       let libelle = '';
       if (referencePDR) {
-        libelle = removeAccents(referencePDR + ' ' + invoiceData.fournisseur);
+        libelle = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
       } else if (invoiceData.reference_interne) {
-        libelle = removeAccents(invoiceData.reference_interne + ' ' + invoiceData.fournisseur);
+        libelle = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
       } else {
         libelle = removeAccents(invoiceData.fournisseur);
       }
@@ -979,9 +993,9 @@ function exportMultipleInvoices(allInvoicesData) {
       
       let description = '';
       if (referencePDR) {
-        description = removeAccents(referencePDR + ' ' + invoiceData.fournisseur);
+        description = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
       } else if (invoiceData.reference_interne) {
-        description = removeAccents(invoiceData.reference_interne + ' ' + invoiceData.fournisseur);
+        description = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
       } else {
         description = removeAccents(
           e.accountType === 'charge' ? 
@@ -1009,18 +1023,16 @@ function exportMultipleInvoices(allInvoicesData) {
         '\r\n';
       
       output += line;
-      totalLines++; // 🆕
+      totalLines++;
     });
   });
 
-  // 🆕 Vérification avant téléchargement
   if (totalLines === 0) {
     alert('❌ Aucune écriture générée');
     return;
   }
 
-  // Télécharger le fichier
-  const blob = new Blob([output], { type: 'text/plain;charset=utf-8' }); // 🆕 Charset UTF-8
+  const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1036,7 +1048,6 @@ function exportMultipleInvoices(allInvoicesData) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   
-  // 🆕 Message de confirmation détaillé
   alert(`✅ Export réussi !\n\n${allInvoicesData.length} factures exportées\n${totalLines} écritures comptables générées\n\nFichier: ExportFile_Batch_${allInvoicesData.length}factures_${dateStr}.txt`);
 }
 
