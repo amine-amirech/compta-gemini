@@ -825,6 +825,7 @@ function openAccountSelectorModal(invoiceIndex) {
   
   // Stocker temporairement les comptes personnalisés s'ils existent
   if (!inv.customAccounts) inv.customAccounts = {};
+  if (!inv.deletedEntries) inv.deletedEntries = [];
   
   const modalHtml = `
     <div id="accountSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -839,11 +840,14 @@ function openAccountSelectorModal(invoiceIndex) {
               <th class="px-3 py-2 text-left">Compte</th>
               <th class="px-3 py-2 text-right">Montant</th>
               <th class="px-3 py-2 text-center">D/C</th>
+              <th class="px-3 py-2 text-center">Action</th>
             </tr>
           </thead>
-          <tbody>
-            ${entries.map((e, i) => `
-              <tr class="border-t">
+          <tbody id="entriesTableBody">
+            ${entries.map((e, i) => {
+              const isDeleted = inv.deletedEntries.includes(i);
+              return `
+              <tr id="entry-row-${i}" class="border-t ${isDeleted ? 'opacity-30 bg-red-50' : ''}">
                 <td class="px-3 py-2 text-sm">
                   <span class="px-2 py-1 rounded text-xs font-medium ${
                     e.accountType === 'charge' ? 'bg-blue-100 text-blue-700' :
@@ -853,7 +857,7 @@ function openAccountSelectorModal(invoiceIndex) {
                 </td>
                 <td class="px-3 py-2">
                   <select id="modal-account-${i}" class="border rounded px-2 py-1 w-full text-sm" 
-                          data-entry-index="${i}" data-account-type="${e.accountType}">
+                          data-entry-index="${i}" data-account-type="${e.accountType}" ${isDeleted ? 'disabled' : ''}>
                     <option value="">-- Sélectionner --</option>
                     ${getAccountsByType(e.accountType).map(a => 
                       `<option value="${a.code}" ${(inv.customAccounts[i] || e.compte) === a.code ? 'selected' : ''}>${a.code} - ${a.label}</option>`
@@ -866,8 +870,14 @@ function openAccountSelectorModal(invoiceIndex) {
                     ${e.sens}
                   </span>
                 </td>
+                <td class="px-3 py-2 text-center">
+                  ${isDeleted ? 
+                    `<button onclick="restoreEntry(${invoiceIndex}, ${i})" class="text-green-500 hover:text-green-700 text-xs font-semibold">↩️ Restaurer</button>` :
+                    `<button onclick="deleteEntry(${invoiceIndex}, ${i})" class="text-red-500 hover:text-red-700 text-xs font-semibold">🗑️ Supprimer</button>`
+                  }
+                </td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
         
@@ -910,6 +920,33 @@ function closeAccountSelectorModal() {
   const modal = document.getElementById('accountSelectorModal');
   if (modal) modal.remove();
 }
+
+function deleteEntry(invoiceIndex, entryIndex) {
+  const inv = window.batchInvoicesData[invoiceIndex];
+  if (!inv.deletedEntries) inv.deletedEntries = [];
+  
+  if (!inv.deletedEntries.includes(entryIndex)) {
+    inv.deletedEntries.push(entryIndex);
+  }
+  
+  // Rafraîchir le modal
+  closeAccountSelectorModal();
+  openAccountSelectorModal(invoiceIndex);
+}
+
+function restoreEntry(invoiceIndex, entryIndex) {
+  const inv = window.batchInvoicesData[invoiceIndex];
+  if (!inv.deletedEntries) inv.deletedEntries = [];
+  
+  const idx = inv.deletedEntries.indexOf(entryIndex);
+  if (idx > -1) {
+    inv.deletedEntries.splice(idx, 1);
+  }
+  
+  // Rafraîchir le modal
+  closeAccountSelectorModal();
+  openAccountSelectorModal(invoiceIndex);
+}    
     
 // 🆕 Fonction pour formater la date
 function formatDate(dateStr) {
