@@ -1294,16 +1294,23 @@ Réponds UNIQUEMENT avec ce JSON (sans markdown, sans texte) :
         console.log(`[BATCH] 📡 Réponse API status: ${response.status}`);
 
         if (!response.ok) {
+   console.error(`[API] ❌ ERROR Response`);
           const errorText = await response.text();
-          console.error(`[BATCH] ❌ Erreur API pour ${file.name}:`, errorText);
+          console.error(`[API] ❌ Error body:`, errorText);
           
-          // 🆕 Détails d'erreur plus précis
-          let errorMsg = `Erreur ${response.status}`;
+          let errorDetails = {};
           try {
-            const errorJson = JSON.parse(errorText);
-            errorMsg = errorJson.error?.message || errorMsg;
+            errorDetails = JSON.parse(errorText);
+            console.error(`[API] ❌ Parsed error:`, errorDetails);
           } catch (e) {
-            errorMsg = errorText.substring(0, 100);
+            console.error(`[API] ❌ Could not parse error as JSON`);
+          }
+          
+          let errorMsg = `Error ${response.status}: `;
+          if (errorDetails.error?.message) {
+            errorMsg += errorDetails.error.message;
+          } else {
+            errorMsg += errorText.substring(0, 200);
           }
           
           alert(`❌ Erreur API pour ${file.name}:\n${errorMsg}`);
@@ -1312,11 +1319,19 @@ Réponds UNIQUEMENT avec ce JSON (sans markdown, sans texte) :
         }
 
         const data = await response.json();
-        console.log(`[BATCH] 📥 Données reçues pour ${file.name}`);
+        console.log(`[API] 📥 Parsing JSON response...`);
+        const data = await response.json();
+        console.log(`[API] ✅ JSON parsed successfully`);
+        console.log(`[API] 📊 Response structure:`, {
+          hasCandidates: !!data.candidates,
+          candidatesLength: data.candidates?.length,
+          hasContent: !!data.candidates?.[0]?.content,
+          hasParts: !!data.candidates?.[0]?.content?.parts
+        });
         
-        // 🆕 Vérification de la structure de réponse
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-          console.error(`[BATCH] ❌ Structure de réponse invalide pour ${file.name}:`, data);
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          console.error(`[API] ❌ Invalid response structure`);
+          console.error(`[API] ❌ Full response:`, JSON.stringify(data, null, 2));
           alert(`❌ Réponse API invalide pour ${file.name}`);
           resolve(null);
           return;
