@@ -24,9 +24,9 @@
             <p class="text-sm text-yellow-700 font-semibold mb-2">⚙️ Configuration requise</p>
             <div class="flex gap-2">
               <input type="password" id="apiKey" placeholder="Votre API ici" class="flex-1 px-3 py-2 border rounded-lg text-sm">
-              <button onclick="saveApiKey()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm whitespace-nowrap">
-                💾 Sauvegarder
-              </button>
+              <button onclick="console.log('[BTN] Clic détecté'); saveApiKey()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm whitespace-nowrap">
+  💾 Sauvegarder
+</button>
               <a href="https://aistudio.google.com/app/apikey" target="_blank" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm whitespace-nowrap">
                 🔑 Obtenir clé
               </a>
@@ -504,7 +504,20 @@ function loadApiKey() {
   }
 }
 
-    window.addEventListener('DOMContentLoaded', loadApiKey);
+    // APRÈS (avec logs et test)
+console.log('[INIT] 🚀 Script chargé');
+
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('[INIT] 🎯 DOM chargé, initialisation...');
+  loadApiKey();
+  
+  // Test d'accès aux éléments
+  const apiKeyInput = document.getElementById('apiKey');
+  console.log('[INIT] 📍 Champ API trouvé:', !!apiKeyInput);
+  
+  const saveBtn = document.querySelector('button[onclick="saveApiKey()"]');
+  console.log('[INIT] 📍 Bouton sauvegarder trouvé:', !!saveBtn);
+});
 
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
