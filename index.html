@@ -841,11 +841,52 @@ function openAccountSelectorModal(invoiceIndex) {
   if (!inv.customAccounts) inv.customAccounts = {};
   if (!inv.deletedEntries) inv.deletedEntries = [];
   
-  const modalHtml = `
+const modalHtml = `
     <div id="accountSelectorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-4">⚙️ Configuration des comptes - ${inv.fournisseur}</h3>
         <p class="text-sm text-gray-600 mb-4">Facture ${inv.numero_facture} - ${formatDate(inv.date)}</p>
+        
+        <!-- 🆕 SÉLECTEUR DE TYPE DE FACTURE -->
+        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <label class="block text-sm font-semibold text-gray-700 mb-3">
+            📋 Type de facture
+          </label>
+          <div class="flex flex-col gap-2">
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-100 p-2 rounded">
+              <input type="radio" 
+                     name="invoiceType" 
+                     value="normale" 
+                     ${!inv.est_intracomm && !inv.est_avoir ? 'checked' : ''} 
+                     onchange="changeInvoiceType(${invoiceIndex}, 'normale')"
+                     class="w-4 h-4">
+              <span class="text-sm font-medium">🇫🇷 Facture française (TVA 20%)</span>
+            </label>
+            
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-100 p-2 rounded">
+              <input type="radio" 
+                     name="invoiceType" 
+                     value="intracomm" 
+                     ${inv.est_intracomm && !inv.est_avoir ? 'checked' : ''} 
+                     onchange="changeInvoiceType(${invoiceIndex}, 'intracomm')"
+                     class="w-4 h-4">
+              <span class="text-sm font-medium">🇪🇺 Intracommunautaire (Autoliquidation)</span>
+            </label>
+            
+            <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-100 p-2 rounded">
+              <input type="radio" 
+                     name="invoiceType" 
+                     value="avoir" 
+                     ${inv.est_avoir ? 'checked' : ''} 
+                     onchange="changeInvoiceType(${invoiceIndex}, 'avoir')"
+                     class="w-4 h-4">
+              <span class="text-sm font-medium">🔄 Avoir</span>
+            </label>
+          </div>
+          <p class="text-xs text-gray-600 mt-2">
+            ⚠️ Changer le type régénère automatiquement les écritures comptables
+          </p>
+        </div>
         
         <table class="w-full border">
           <thead class="bg-gray-100">
@@ -930,6 +971,32 @@ function saveAccountsForInvoice(invoiceIndex) {
   alert('✅ Comptes sauvegardés pour cette facture');
 }
 
+function changeInvoiceType(invoiceIndex, newType) {
+  const inv = window.batchInvoicesData[invoiceIndex];
+  
+  // Réinitialiser les flags
+  inv.est_intracomm = false;
+  inv.est_avoir = false;
+  
+  // Appliquer le nouveau type
+  if (newType === 'intracomm') {
+    inv.est_intracomm = true;
+  } else if (newType === 'avoir') {
+    inv.est_avoir = true;
+  }
+  // newType === 'normale' : les deux restent à false
+  
+  // Réinitialiser les comptes personnalisés et lignes supprimées
+  inv.customAccounts = {};
+  inv.deletedEntries = [];
+  
+  console.log(`✅ Type de facture changé: ${newType}`, inv);
+  
+  // Rafraîchir le modal pour régénérer les écritures
+  closeAccountSelectorModal();
+  openAccountSelectorModal(invoiceIndex);
+}    
+
 function closeAccountSelectorModal() {
   const modal = document.getElementById('accountSelectorModal');
   if (modal) modal.remove();
@@ -938,6 +1005,16 @@ function closeAccountSelectorModal() {
 function deleteEntry(invoiceIndex, entryIndex) {
   const inv = window.batchInvoicesData[invoiceIndex];
   if (!inv.deletedEntries) inv.deletedEntries = [];
+  
+  // ⚠️ Avertissement si suppression d'une ligne TVA
+  const entries = generateEntriesForInvoice(inv);
+  const entry = entries[entryIndex];
+  
+  if (entry.accountType === 'tva') {
+    if (!confirm(`⚠️ ATTENTION : Supprimer cette ligne de TVA peut créer un déséquilibre.\n\nSi le type de facture est incorrect (ex: Intracomm au lieu de FR), utilisez plutôt le sélecteur de type en haut.\n\nConfirmer la suppression ?`)) {
+      return;
+    }
+  }
   
   if (!inv.deletedEntries.includes(entryIndex)) {
     inv.deletedEntries.push(entryIndex);
