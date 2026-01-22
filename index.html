@@ -149,6 +149,27 @@
   </div>
 
   <script>
+
+function saveApiKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) {
+    alert('⚠️ Veuillez entrer une clé API');
+    return;
+  }
+  if (!key.startsWith('AIza')) {
+    alert('⚠️ Format de clé invalide. Une clé Gemini commence par "AIza"');
+    return;
+  }
+  localStorage.setItem('gemini_api_key', key);
+  alert('✅ Clé API sauvegardée avec succès !');
+}
+
+function loadApiKey() {
+  const key = localStorage.getItem('gemini_api_key');
+  if (key) {
+    document.getElementById('apiKey').value = key;
+  }
+}
     let extractedData = null;
     let accountEntries = [];
     let currentAccountType = null;
@@ -472,37 +493,6 @@ function updateAccount(index, compte) {
       { code: '445200', label: 'TVA collectée Intracomm' },
     ];
 
-function saveApiKey() {
-  console.log('[saveApiKey] 🔍 Tentative de sauvegarde...');
-  const key = document.getElementById('apiKey').value.trim();
-  console.log('[saveApiKey] 📝 Clé récupérée:', key ? `${key.substring(0, 15)}...` : 'VIDE');
-  
-  if (!key) {
-    console.error('[saveApiKey] ❌ Clé vide');
-    alert('⚠️ Veuillez entrer une clé API');
-    return;
-  }
-  if (!key.startsWith('AIza')) {
-    console.error('[saveApiKey] ❌ Format invalide:', key.substring(0, 10));
-    alert('⚠️ Format de clé invalide. Une clé Gemini commence par "AIza"');
-    return;
-  }
-  localStorage.setItem('gemini_api_key', key);
-  console.log('[saveApiKey] ✅ Clé sauvegardée dans localStorage');
-  alert('✅ Clé API sauvegardée avec succès !');
-}
-
-function loadApiKey() {
-  console.log('[loadApiKey] 🔍 Chargement de la clé API...');
-  const key = localStorage.getItem('gemini_api_key');
-  console.log('[loadApiKey] 🔑 Clé trouvée:', key ? `${key.substring(0, 15)}...` : 'AUCUNE');
-  if (key) {
-    document.getElementById('apiKey').value = key;
-    console.log('[loadApiKey] ✅ Clé chargée dans le champ');
-  } else {
-    console.log('[loadApiKey] ⚠️ Aucune clé sauvegardée');
-  }
-}
 
     // APRÈS (avec logs et test)
 console.log('[INIT] 🚀 Script chargé');
