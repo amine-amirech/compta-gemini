@@ -486,12 +486,17 @@ function updateAccount(index, compte) {
       alert('✅ Clé API sauvegardée avec succès !');
     }
 
-    function loadApiKey() {
-      const key = localStorage.getItem('gemini_api_key');
-      if (key) {
-        document.getElementById('apiKey').value = key;
-      }
-    }
+function loadApiKey() {
+  console.log('[loadApiKey] 🔍 Chargement de la clé API...');
+  const key = localStorage.getItem('gemini_api_key');
+  console.log('[loadApiKey] 🔑 Clé trouvée:', key ? `${key.substring(0, 15)}...` : 'AUCUNE');
+  if (key) {
+    document.getElementById('apiKey').value = key;
+    console.log('[loadApiKey] ✅ Clé chargée dans le champ');
+  } else {
+    console.log('[loadApiKey] ⚠️ Aucune clé sauvegardée');
+  }
+}
 
     window.addEventListener('DOMContentLoaded', loadApiKey);
 
