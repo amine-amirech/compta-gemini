@@ -1125,96 +1125,102 @@ function exportMultipleInvoices(allInvoicesData) {
       );
     }
     
-    // Extraction PDR et génération des lignes
-    entries.forEach(e => {
-      let referencePDR = null;
-      
-      // Chercher PDR dans description
-      if (invoiceData.description) {
-        const match = invoiceData.description.match(/PDR-\d{2}-\d{4}/i);
-        if (match) referencePDR = match[0].toUpperCase();
-      }
-      
-      // Chercher dans reference_interne
-      if (!referencePDR && invoiceData.reference_interne) {
-        const match = invoiceData.reference_interne.match(/PDR-\d{2}-\d{4}/i);
-        if (match) referencePDR = match[0].toUpperCase();
-      }
-      
-      // Chercher dans numero_facture
-      if (!referencePDR && invoiceData.numero_facture) {
-        const match = invoiceData.numero_facture.match(/PDR-\d{2}-\d{4}/i);
-        if (match) referencePDR = match[0].toUpperCase();
-      }
-      
-      let libelle = '';
-      if (referencePDR) {
-        libelle = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
-      } else if (invoiceData.reference_interne) {
-        libelle = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
-      } else {
-        libelle = removeAccents(invoiceData.fournisseur);
-      }
-      libelle = libelle.substring(0, 25);
-      
-      let description = '';
-      if (referencePDR) {
-        description = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
-      } else if (invoiceData.reference_interne) {
-        description = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
-      } else {
-        description = removeAccents(
-          e.accountType === 'charge' ? 
-            (invoiceData.description || 'Achat') : 
-            invoiceData.fournisseur
-        );
-      }
-      description = description.substring(0, 34);
-      
-      const montantArrondi = Math.round(parseFloat(e.montant) * 100) / 100;
-      const montantCentimes = Math.round(montantArrondi * 100);
-      
-      const line = 
-        numFacture.toString().padStart(5, ' ') + ',' +
-        code + ',' +
-        date + ',' +
-        ''.padEnd(20, ' ') + ',' +
-        e.compte.padEnd(11, ' ') + ',' +
-        libelle.padEnd(25, ' ') + ',' +
-        montantCentimes.toString().padStart(13, ' ') + ',' +
-        e.sens + ',' +
-        ''.padEnd(12, ' ') + ',' +
-        ''.padEnd(6, ' ') + ',' +
-        description.padEnd(34, ' ') + ',' +
-        '\r\n';
-      
-      output += line;
-      totalLines++;
-    });
-  });
-
-  if (totalLines === 0) {
-    alert('❌ Aucune écriture générée');
-    return;
+// Extraction PDR et génération des lignes
+entries.forEach((e, index) => {
+  // 🆕 Ignorer les lignes supprimées
+  if (invoiceData.deletedEntries && invoiceData.deletedEntries.includes(index)) {
+    return; // Skip cette ligne
   }
+  
+  let referencePDR = null;
+  
+  // Chercher PDR dans description
+  if (invoiceData.description) {
+    const match = invoiceData.description.match(/PDR-\d{2}-\d{4}/i);
+    if (match) referencePDR = match[0].toUpperCase();
+  }
+  
+  // Chercher dans reference_interne
+  if (!referencePDR && invoiceData.reference_interne) {
+    const match = invoiceData.reference_interne.match(/PDR-\d{2}-\d{4}/i);
+    if (match) referencePDR = match[0].toUpperCase();
+  }
+  
+  // Chercher dans numero_facture
+  if (!referencePDR && invoiceData.numero_facture) {
+    const match = invoiceData.numero_facture.match(/PDR-\d{2}-\d{4}/i);
+    if (match) referencePDR = match[0].toUpperCase();
+  }
+  
+  let libelle = '';
+  if (referencePDR) {
+    libelle = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
+  } else if (invoiceData.reference_interne) {
+    libelle = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
+  } else {
+    libelle = removeAccents(invoiceData.fournisseur);
+  }
+  libelle = libelle.substring(0, 25);
+  
+  let description = '';
+  if (referencePDR) {
+    description = removeAccents(`${referencePDR} ${invoiceData.fournisseur}`);
+  } else if (invoiceData.reference_interne) {
+    description = removeAccents(`${invoiceData.reference_interne} ${invoiceData.fournisseur}`);
+  } else {
+    description = removeAccents(
+      e.accountType === 'charge' ? 
+        (invoiceData.description || 'Achat') : 
+        invoiceData.fournisseur
+    );
+  }
+  description = description.substring(0, 34);
+  
+  const montantArrondi = Math.round(parseFloat(e.montant) * 100) / 100;
+  const montantCentimes = Math.round(montantArrondi * 100);
+  
+  const line = 
+    numFacture.toString().padStart(5, ' ') + ',' +
+    code + ',' +
+    date + ',' +
+    ''.padEnd(20, ' ') + ',' +
+    e.compte.padEnd(11, ' ') + ',' +
+    libelle.padEnd(25, ' ') + ',' +
+    montantCentimes.toString().padStart(13, ' ') + ',' +
+    e.sens + ',' +
+    ''.padEnd(12, ' ') + ',' +
+    ''.padEnd(6, ' ') + ',' +
+    description.padEnd(34, ' ') + ',' +
+    '\r\n';
+  
+  output += line;
+  totalLines++;
+});
 
-  const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  
-  const today = new Date();
-  const dateStr = today.getFullYear() + 
-                  String(today.getMonth() + 1).padStart(2, '0') + 
-                  String(today.getDate()).padStart(2, '0');
-  
-  a.download = `ExportFile_Batch_${allInvoicesData.length}factures_${dateStr}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  
-  alert(`✅ Export réussi !\n\n${allInvoicesData.length} factures exportées\n${totalLines} écritures comptables générées\n\nFichier: ExportFile_Batch_${allInvoicesData.length}factures_${dateStr}.txt`);
+});
+
+if (totalLines === 0) {
+  alert('❌ Aucune écriture générée');
+  return;
+}
+
+const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+
+const today = new Date();
+const dateStr = today.getFullYear() + 
+                String(today.getMonth() + 1).padStart(2, '0') + 
+                String(today.getDate()).padStart(2, '0');
+
+a.download = `ExportFile_Batch_${allInvoicesData.length}factures_${dateStr}.txt`;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+
+alert(`✅ Export réussi !\n\n${allInvoicesData.length} factures exportées\n${totalLines} écritures comptables générées\n\nFichier: ExportFile_Batch_${allInvoicesData.length}factures_${dateStr}.txt`);
 }
 async function analyzeInvoiceForBatch(file, apiKey) {
   console.log(`[BATCH] 🔄 Début analyse: ${file.name}`);
