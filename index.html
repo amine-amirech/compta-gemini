@@ -1332,10 +1332,10 @@ Réponds UNIQUEMENT avec ce JSON (sans markdown, sans texte) :
           return;
         }
 
-        const data = await response.json();
-        console.log(`[API] 📥 Parsing JSON response...`);
-        const data = await response.json();
-        console.log(`[API] ✅ JSON parsed successfully`);
+
+console.log(`[API] 📥 Parsing JSON response...`);
+const data = await response.json();
+console.log(`[API] ✅ JSON parsed successfully`);
         console.log(`[API] 📊 Response structure:`, {
           hasCandidates: !!data.candidates,
           candidatesLength: data.candidates?.length,
