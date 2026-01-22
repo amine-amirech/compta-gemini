@@ -928,7 +928,7 @@ function confirmAndExportBatch() {
   
   const count = window.batchInvoicesData.length;
   
-  // 🆕 Vérification des dates
+  // Vérification des dates
   const invalidDates = window.batchInvoicesData.filter(inv => 
     !inv.date || inv.date.length !== 8 || isNaN(inv.date)
   );
@@ -942,7 +942,6 @@ function confirmAndExportBatch() {
     exportMultipleInvoices(window.batchInvoicesData);
   }
 }
-
 function exportMultipleInvoices(allInvoicesData) {
   const code = document.getElementById('codeJournal').value;
   
